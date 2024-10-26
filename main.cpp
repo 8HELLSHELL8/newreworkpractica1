@@ -22,7 +22,6 @@ void unlockTable(const string& pathToDir)
 {
     //Current version takes "Схема 1/таблица1" as input
     string tableName = pathToDir.substr(13, tableName.size() - 8);
-    cout << pathToDir + "/" + tableName + "_lock";
     ofstream lockFile(pathToDir + "/" + tableName + "_lock");
     lockFile << 0;
     lockFile.close();
@@ -32,10 +31,50 @@ void lockTable(const string& pathToDir)
 {
     //Current version takes "Схема 1/таблица1" as input
     string tableName = pathToDir.substr(13, tableName.size() - 8);
-    cout << pathToDir + "/" + tableName + "_lock";
     ofstream lockFile(pathToDir + "/" + tableName + "_lock");
     lockFile << 1;
     lockFile.close();
+}
+
+void increasePKSEQ(const string& pathToDir)
+{
+    string tableName = pathToDir.substr(13, tableName.size() - 8); //Getting table name
+
+    string fileInput;
+    ifstream PKSEQread(pathToDir + "/" + tableName + "_pk_sequence"); //Opening line counter
+    if (!PKSEQread.is_open())
+    {
+        throw runtime_error("Error opening pk_sequence and reading it");
+    }
+    getline(PKSEQread, fileInput);
+    PKSEQread.close();
+
+    int increasedLinesAmount = stoi(fileInput) + 1;
+
+    ofstream PKSEQupload(pathToDir + "/" + tableName + "_lock");
+    PKSEQupload << increasedLinesAmount;
+    PKSEQupload.close();
+    
+}
+
+void decreasePKSEQ(const string& pathToDir)
+{
+    string tableName = pathToDir.substr(13, tableName.size() - 8); //Getting table name
+
+    string fileInput;
+    ifstream PKSEQread(pathToDir + "/" + tableName + "_pk_sequence"); //Opening line counter
+    if (!PKSEQread.is_open())
+    {
+        throw runtime_error("Error opening pk_sequence and reading it");
+    }
+    getline(PKSEQread, fileInput);
+    PKSEQread.close();
+
+    int decreasedLinesAmount = stoi(fileInput) - 1;
+
+    ofstream PKSEQupload(pathToDir + "/" + tableName + "_lock");
+    PKSEQupload << decreasedLinesAmount;
+    PKSEQupload.close();
 }
 
 string readJSON(const string& fileName) //Reading json content in string line
@@ -138,11 +177,24 @@ void createDataBase()
     }
 }
 
-LinkedList<HASHtable<string>> getTableLines(const string& pathToDir, int amountOfLinesInTable)
+int getPKSEQ(string pathToDir)
 {
-    
-    LinkedList<HASHtable<string>> thisTable;
+    string tableName = pathToDir.substr(13, tableName.size() - 8); //Getting table name
 
+    string fileInput;
+    ifstream PKSEQ(pathToDir + "/" + tableName + "_pk_sequence"); //Opening line counter
+    if (!PKSEQ.is_open())
+    {
+        throw runtime_error("Error opening pk_sequence and reading it");
+    }
+    getline(PKSEQ, fileInput);
+    PKSEQ.close();
+
+    return stoi(fileInput);
+}
+
+LinkedList<string> getColumnNamesFromTable(string pathToDir)
+{
     ifstream COLNAMES(pathToDir + "/1.csv");
     string fileInput;
     getline(COLNAMES, fileInput, '\n');
@@ -162,14 +214,22 @@ LinkedList<HASHtable<string>> getTableLines(const string& pathToDir, int amountO
     if (!word.empty()) columnNames.addtail(word);
     COLNAMES.close();
 
-    string tableName = pathToDir.substr(13, pathToDir.size() - 8); //Getting table name
+    return columnNames;
+}
+
+LinkedList<HASHtable<string>> getTableLines(const string& pathToDir)
+{
+    
+    LinkedList<HASHtable<string>> thisTable;
+    int amountOfLinesInTable = getPKSEQ(pathToDir);
+    LinkedList<string> columnNames = getColumnNamesFromTable(pathToDir);
     
     int filesCounter = ceil(static_cast<double>(amountOfLinesInTable)/1000); //Counting amount of .csv files
     for (int i = 0; i < filesCounter; i++)
     {
         int startRow = i * 1000;
         int endRow = min(startRow + 1000, amountOfLinesInTable);
-
+        string fileInput;
         ifstream CSV(pathToDir + "/" + to_string(i+1) + ".csv");
         for (int row = startRow; row < endRow; row++)
         {
@@ -197,21 +257,11 @@ LinkedList<HASHtable<string>> getTableLines(const string& pathToDir, int amountO
     return thisTable;
 }
 
-void readTable(const string& pathToDir)
+LinkedList<HASHtable<string>> readTable(const string& pathToDir)
 {
-
     LinkedList<HASHtable<string>> thisTable;
-    string tableName = pathToDir.substr(13, tableName.size() - 8); //Getting table name
 
-    string fileInput;
-    ifstream PKSEQ(pathToDir + "/" + tableName + "_pk_sequence"); //Opening line counter
-    if (!PKSEQ.is_open())
-    {
-        throw runtime_error("Error opening pk_sequence and reading it");
-    }
-    getline(PKSEQ, fileInput);
-
-    int amountLines = stoi(fileInput);
+    int amountLines = getPKSEQ(pathToDir);
     int fileCount = ceil(static_cast<double>(amountLines) / 1000);
     
     for (int i = 0; i < fileCount; ++i) //Creating CSV if >1000 elements
@@ -225,29 +275,76 @@ void readTable(const string& pathToDir)
         fileCSV.close();
     }
 
-    thisTable = getTableLines(pathToDir, amountLines);
-    cout << "TABLE SIZE: " << thisTable.size() << "!!!!!" << endl;
-    thisTable.get(0).print();
-
+    thisTable = getTableLines(pathToDir);
+    return thisTable;
 }
 
-
-
-void insert(LinkedList<string> values, LinkedList<string> pathTodir)
+void uploadTable(LinkedList<HASHtable<string>> table, string pathToDir)
 {
-    //LinkedList<HASHtable<string>> table = readTable();
+    fstream UPLOAD()
+}
 
+void insert(LinkedList<string> values, string pathToDir)
+{
+    lockTable(pathToDir);
+    LinkedList<HASHtable<string>> table = readTable(pathToDir);
+    
+    LinkedList<string> columnNames = getColumnNamesFromTable(pathToDir);
+    HASHtable<string> row(columnNames.size());
+    if (values.size() == columnNames.size())
+    {   
+        for (int i = 0; i < columnNames.size(); i++)
+        {
+            row.HSET(columnNames.get(i),values.get(i));
+        }
+        table.addtail(row);
+        increasePKSEQ(pathToDir);
+    }
+    else if (values.size() < columnNames.size())
+    {
+        for (int i = 0; i < columnNames.size(); i++)
+        {
+            if (i >= values.size())
+            {
+                row.HSET(columnNames.get(i),"EMPTY");
+            }
+            else
+            {
+                row.HSET(columnNames.get(i),values.get(i));
+            }
+        }
+        table.addtail(row);
+        increasePKSEQ(pathToDir);
+    }
+    else
+    {
+        unlockTable(pathToDir);
+        throw runtime_error("Amount of values more than columns in table!");
+    }
+
+    uploadTable(table, pathToDir);
+
+    unlockTable(pathToDir);
 }
 
 int main()
 {
-    //setlocale(LC_ALL, "RU");
+    setlocale(LC_ALL, "RU");
     
     //createDataBase();
     //unlockTable("Схема 1/таблица1");
+    LinkedList<string> test1;
+    test1.addtail("1");
+    test1.addtail("2");
+    test1.addtail("3");
+    test1.addtail("4");
 
     
-    readTable("Схема 1/таблица1");
+    string pathToDir = "Схема 1/таблица1";
+    insert(test1, pathToDir);
+
+
+    
 
     return 0;
 }
