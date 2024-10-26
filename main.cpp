@@ -1,6 +1,7 @@
 //FOR Programm
 #include <iostream>
 #include "headers/LinkedList.h"
+#include "headers/HashTable.h"
 
 //FOR using files in system
 #include <filesystem>
@@ -135,13 +136,84 @@ void createDataBase()
     }
 }
 
+LinkedList<string> readColumnNames(const string& pathToDir)
+{
+    LinkedList<string> columnNames;
+    string tableName = pathToDir.substr(13, tableName.size() - 8); //Getting table name
+    string fileInput;
+    
+    ifstream CSV(pathToDir + "/1.csv");
+    getline(CSV, fileInput, '\n');
+    CSV.close();
+
+    string word = "";
+    for (auto symbol : fileInput) //Process line
+    {
+        cout << symbol << " " << word << endl;
+        if (symbol = ',')
+        {
+            columnNames.addhead(word);
+            word = "";
+            continue;
+        }
+        word += symbol;
+    }
+
+    return columnNames;
+}
+
+void readTable(const string& pathToDir)
+{
+
+    LinkedList<HASHtable<string>> thisTable;
+    string tableName = pathToDir.substr(13, tableName.size() - 8); //Getting table name
+
+    string fileInput;
+    ifstream PKSEQ(pathToDir + "/" + tableName + "pk_sequence"); //Opening line counter
+    if (!PKSEQ.is_open())
+    {
+        throw runtime_error("Error opening pk_sequence and reading it");
+    }
+    getline(PKSEQ, fileInput);
+
+    int amountLines = stoi(fileInput);
+
+    LinkedList<string> columnNames;
+    //columnNames
+
+    // if (amountLines <= 1000) 
+    // {
+    //     for (size_t i = 0; i < amountLines; i++)
+    //     {
+
+    //     }
+    // }
+    // else 
+    // {
+    //     for (size_t i = 0; i < amountLines; i+= 1000)
+    //     {
+
+    //     }
+    // }
+}
+
+
+
+void insert(LinkedList<string> values, LinkedList<string> pathTodir)
+{
+    //LinkedList<HASHtable<string>> table = readTable();
+
+}
 
 int main()
 {
-    setlocale(LC_ALL, "RU");
+    //setlocale(LC_ALL, "RU");
     
     //createDataBase();
-    unlockTable("Схема 1/таблица1");
+    //unlockTable("Схема 1/таблица1");
+
+    LinkedList<string> test = readColumnNames("Схема 1/таблица1");
+    test.print();
 
 
     return 0;
