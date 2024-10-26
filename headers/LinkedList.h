@@ -43,18 +43,18 @@ public:
         tail = nullptr;
     }
 
-    ~LinkedList() 
-    {
-        Node<T>* current = head;
+    // ~LinkedList() 
+    // {
+    //     Node<T>* current = head;
 
-        while (current != nullptr) 
-        {
-            Node<T>* next_node = current->next;
-            delete current;
-            current = next_node;
-        }
-        head = tail = nullptr;
-    }                         
+    //     while (current != nullptr) 
+    //     {
+    //         Node<T>* next_node = current->next;
+    //         delete current;
+    //         current = next_node;
+    //     }
+    //     head = tail = nullptr;
+    // }                         
 
     bool is_empty() 
     {

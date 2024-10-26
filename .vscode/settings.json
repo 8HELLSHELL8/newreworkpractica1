@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "tuple": "cpp",
-        "stdexcept": "cpp"
+        "stdexcept": "cpp",
+        "iosfwd": "cpp"
     }
 }

@@ -2,6 +2,8 @@
 #include <iostream>
 #include "headers/LinkedList.h"
 #include "headers/HashTable.h"
+#include <cmath>
+#include <string>
 
 //FOR using files in system
 #include <filesystem>
@@ -136,18 +138,18 @@ void createDataBase()
     }
 }
 
-LinkedList<string> readColumnNames(const string& pathToDir)
+LinkedList<HASHtable<string>> getTableLines(const string& pathToDir, int amountOfLinesInTable)
 {
-    LinkedList<string> columnNames;
-    string tableName = pathToDir.substr(13, pathToDir.size() - 8); //Getting table name
-    string fileInput;
     
-    ifstream CSV(pathToDir + "/1.csv");
-    getline(CSV, fileInput, '\n');
-    CSV.close();
+    LinkedList<HASHtable<string>> thisTable;
 
+    ifstream COLNAMES(pathToDir + "/1.csv");
+    string fileInput;
+    getline(COLNAMES, fileInput, '\n');
+    
+    LinkedList<string> columnNames;
     string word = "";
-    for (auto symbol : fileInput) //Process line
+    for (auto symbol : fileInput) //GETTING column names
     {
         if (symbol == ',')
         {
@@ -158,8 +160,41 @@ LinkedList<string> readColumnNames(const string& pathToDir)
         word += symbol;
     }
     if (!word.empty()) columnNames.addtail(word);
+    COLNAMES.close();
 
-    return columnNames;
+    string tableName = pathToDir.substr(13, pathToDir.size() - 8); //Getting table name
+    
+    int filesCounter = ceil(static_cast<double>(amountOfLinesInTable)/1000); //Counting amount of .csv files
+    for (int i = 0; i < filesCounter; i++)
+    {
+        int startRow = i * 1000;
+        int endRow = min(startRow + 1000, amountOfLinesInTable);
+
+        ifstream CSV(pathToDir + "/" + to_string(i+1) + ".csv");
+        for (int row = startRow; row < endRow; row++)
+        {
+            getline(CSV, fileInput, '\n');
+            HASHtable<string> tableLine(columnNames.size());
+            string word = "";
+            int wordCounter = 0;
+            for (auto symbol : fileInput) //Process line
+            {
+                if (symbol == ',')
+                {
+                    tableLine.HSET(columnNames.get(wordCounter), word);
+                    word = "";
+                    wordCounter++;
+                    continue;
+                }
+                word += symbol;
+            }
+            if (!word.empty()) tableLine.HSET(columnNames.get(wordCounter), word);
+            thisTable.addtail(tableLine);
+        }
+        CSV.close();
+    }
+    
+    return thisTable;
 }
 
 void readTable(const string& pathToDir)
@@ -177,31 +212,23 @@ void readTable(const string& pathToDir)
     getline(PKSEQ, fileInput);
 
     int amountLines = stoi(fileInput);
-
-    LinkedList<string> columnNames = readColumnNames(pathToDir);
-
-    if (amountLines <= 1000) 
+    int fileCount = ceil(static_cast<double>(amountLines) / 1000);
+    
+    for (int i = 0; i < fileCount; ++i) //Creating CSV if >1000 elements
     {
-        HASHtable<string> lineOfTable(columnNames.size());
-
-        for (size_t i = 0; i < columnNames.size(); i++) //Copy column names to line and insert it in table
+        fstream fileCSV(pathToDir + "/" + to_string(i+1) + ".csv");
+        if (!fileCSV.good())
         {
-            lineOfTable.HSET(columnNames.get(i), columnNames.get(i));
+            ofstream newFile(pathToDir + "/" + to_string(i+1) + ".csv");
+            newFile.close();
         }
-        thisTable.addtail(lineOfTable);
-
-        for (size_t i = 0; i < amountLines; i++) //
-        {
-            
-        }
+        fileCSV.close();
     }
-    // else 
-    // {
-    //     for (size_t i = 0; i < amountLines; i+= 1000)
-    //     {
 
-    //     }
-    // }
+    thisTable = getTableLines(pathToDir, amountLines);
+    cout << "TABLE SIZE: " << thisTable.size() << "!!!!!" << endl;
+    thisTable.get(0).print();
+
 }
 
 
@@ -219,7 +246,7 @@ int main()
     //createDataBase();
     //unlockTable("Схема 1/таблица1");
 
-
+    
     readTable("Схема 1/таблица1");
 
     return 0;
