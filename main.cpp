@@ -139,7 +139,7 @@ void createDataBase()
 LinkedList<string> readColumnNames(const string& pathToDir)
 {
     LinkedList<string> columnNames;
-    string tableName = pathToDir.substr(13, tableName.size() - 8); //Getting table name
+    string tableName = pathToDir.substr(13, pathToDir.size() - 8); //Getting table name
     string fileInput;
     
     ifstream CSV(pathToDir + "/1.csv");
@@ -149,15 +149,15 @@ LinkedList<string> readColumnNames(const string& pathToDir)
     string word = "";
     for (auto symbol : fileInput) //Process line
     {
-        cout << symbol << " " << word << endl;
-        if (symbol = ',')
+        if (symbol == ',')
         {
-            columnNames.addhead(word);
+            columnNames.addtail(word);
             word = "";
             continue;
         }
         word += symbol;
     }
+    if (!word.empty()) columnNames.addtail(word);
 
     return columnNames;
 }
@@ -169,7 +169,7 @@ void readTable(const string& pathToDir)
     string tableName = pathToDir.substr(13, tableName.size() - 8); //Getting table name
 
     string fileInput;
-    ifstream PKSEQ(pathToDir + "/" + tableName + "pk_sequence"); //Opening line counter
+    ifstream PKSEQ(pathToDir + "/" + tableName + "_pk_sequence"); //Opening line counter
     if (!PKSEQ.is_open())
     {
         throw runtime_error("Error opening pk_sequence and reading it");
@@ -178,16 +178,23 @@ void readTable(const string& pathToDir)
 
     int amountLines = stoi(fileInput);
 
-    LinkedList<string> columnNames;
-    //columnNames
+    LinkedList<string> columnNames = readColumnNames(pathToDir);
 
-    // if (amountLines <= 1000) 
-    // {
-    //     for (size_t i = 0; i < amountLines; i++)
-    //     {
+    if (amountLines <= 1000) 
+    {
+        HASHtable<string> lineOfTable(columnNames.size());
 
-    //     }
-    // }
+        for (size_t i = 0; i < columnNames.size(); i++) //Copy column names to line and insert it in table
+        {
+            lineOfTable.HSET(columnNames.get(i), columnNames.get(i));
+        }
+        thisTable.addtail(lineOfTable);
+
+        for (size_t i = 0; i < amountLines; i++) //
+        {
+            
+        }
+    }
     // else 
     // {
     //     for (size_t i = 0; i < amountLines; i+= 1000)
@@ -212,9 +219,8 @@ int main()
     //createDataBase();
     //unlockTable("Схема 1/таблица1");
 
-    LinkedList<string> test = readColumnNames("Схема 1/таблица1");
-    test.print();
 
+    readTable("Схема 1/таблица1");
 
     return 0;
 }
