@@ -775,7 +775,7 @@ void MENU()
 {
     while (true)
     {
-    system("clear");
+    //system("clear");
     cout << "Enter your query: ";
     string userInput;
     getline(cin, userInput);
