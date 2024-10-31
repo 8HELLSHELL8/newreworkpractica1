@@ -13,6 +13,7 @@
         "memory": "cpp",
         "istream": "cpp",
         "functional": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "string": "cpp"
     }
 }

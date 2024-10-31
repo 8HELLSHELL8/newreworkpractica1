@@ -348,8 +348,6 @@ void uploadTable(LinkedList<HASHtable<string>> table, string tableName)
             {
                 auto currentRow = table.get(row);
 
-                cout << currentRow.HGET(columnNames.get(column));
-
                 if (column == columnNames.size() - 1)
                 {
                     UPLOAD << currentRow.HGET(columnNames.get(column));
@@ -456,13 +454,17 @@ bool whereInside(LinkedList<string> commandList)
     return commandList.search("WHERE");
 }
 
-void handleInput(LinkedList<string> commandList)
+void handleINPUT(LinkedList<string> commandList)
 {
     if (commandList.get(0) == "INSERT" && commandList.get(1) == "INTO" && whereInside(commandList) == 0)
     {
         LinkedList<string> values = parseValuesForInsert(commandList);
         string tableName = parseTablenameForInsert(commandList);
         insert(values, tableName);
+    }
+    else
+    {
+        throw runtime_error("Syntax error in input query!");
     }
 }
 
@@ -677,43 +679,137 @@ void handleSELECT(LinkedList<string> inputList)
     }
 }
 
+bool checkCondition(string table1Name, HASHtable<string> row1, 
+                    LinkedList<string> conditions, LinkedList<string> operators)
+{
+
+    LinkedList<bool> results;
+
+
+    for (int i = 0; i < conditions.size(); i += 3)
+    {
+        string left = conditions.get(i);
+        string op = conditions.get(i + 1);
+        string right = conditions.get(i + 2);
+
+        if (isTableName(left) && op == "=" && !isTableName(right))
+        {
+            if (divideAndGetTable(left) ==  table1Name)
+            {
+                left = row1.HGET(divideAndGetColumn(left));
+            }
+            else
+            {
+                throw runtime_error("Wrong condition for delete");
+            }
+
+            results.addtail(left == right); 
+        }
+        else
+        {
+            throw runtime_error("Wrong syntax in delete");
+        }
+    }
+
+    return getFinalResult(results, operators);
+
+}
+
+void handleDELETE(LinkedList<string> inputList)
+{
+    LinkedList<string> selectedTables = getSelectedTablesFROM(inputList);
+    string tableName = selectedTables.get(0);
+    LinkedList<HASHtable<string>> table = readTable(tableName);
+
+    lockTable(tableName);
+
+    LinkedList<string> conditions;
+    LinkedList<string> operators;
+    
+    bool startWrite = 0;
+    string element;
+    for (int i = 0; i < inputList.size(); i++)
+    {
+        element = inputList.get(i);
+        if (startWrite)
+        {
+            if (element == "OR" || element == "AND")
+            {
+                operators.addtail(element);
+            }
+            else
+            {
+                conditions.addtail(element);
+            }
+        }
+        if (element == "WHERE") startWrite = 1;
+        
+    }
+
+    LinkedList<HASHtable<string>> newTable;
+
+    if (selectedTables.size() == 1)
+    {
+        for(int i = 0; i < table.size(); i++)
+        {
+            HASHtable<string> currentRow = table.get(i);
+            if (!checkCondition(tableName, currentRow, conditions, operators))
+            {
+                newTable.addtail(currentRow);
+            }
+            else decreasePKSEQ(tableName);
+        }
+
+        uploadTable(newTable, tableName);
+    } 
+    else
+    {
+        throw runtime_error("Wrong syntax in delete from table");
+    }
+
+    unlockTable(tableName);
+}
+
+
+void MENU()
+{
+    while (true)
+    {
+    system("clear");
+    cout << "Enter your query: ";
+    string userInput;
+    getline(cin, userInput);
+    LinkedList<string> inputList = parseCommand(userInput);
+    string operation = inputList.get(0);
+    if (operation == "SELECT")
+    {
+        handleSELECT(inputList);
+    }
+    else if (operation == "DELETE")
+    {
+        handleDELETE(inputList);
+    }
+    else if (operation == "INSERT")
+    {
+        handleINPUT(inputList);
+    }
+    else if (operation == "EXIT" || operation == "exit")
+    {
+        exit(0);
+    }
+    else
+    {
+        throw runtime_error("Wrong operation called!");
+    }
+    }    
+}
+
 
 int main()
 {
     setlocale(LC_ALL, "RU");
     createDataBase();
-    string userInput;
-    getline(cin, userInput);
-    LinkedList<string> inputList = parseCommand(userInput);
-    system("clear");
-    //inputList.print();
-
-    
-    handleSELECT(inputList);
-
-    // cout << inputList.size();
-    // for (int i = 0; i < inputList.size(); i++)
-    // {
-    //     cout << inputList.get(i) << "|";
-    // }
-
-    
-
-
-
-    
-    //unlockTable("Схема 1/таблица1");
-    //string tableName = "таблица1";
-    
-    
-
-    // LinkedList<string> test3;
-    // test3.addtail("POCHEMY");
-    // test3.addtail("ONO");
-    // test3.addtail("ROBIT");
-    // test3.addtail("WOWOWOWOWOOWWO");
-    
-    // insert(test3, tableName);
+    MENU();
 
     return 0;
 }
