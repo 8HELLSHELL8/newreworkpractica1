@@ -108,7 +108,7 @@ string readJSON(const string& fileName) //Reading json content in string line
 bool createDir(const string& dirName)
 {
     string pathToDir = filesystem::current_path();
-    pathToDir += dirName;
+    pathToDir += "/" + dirName;
     if (filesystem::create_directory(pathToDir)) return true;
     else return false;
 }
@@ -779,8 +779,15 @@ void MENU()
     cout << "Enter your query: ";
     string userInput;
     getline(cin, userInput);
+
+    if (userInput == "EXIT" || userInput == "exit")
+    {
+        exit(0);
+    }
+
     LinkedList<string> inputList = parseCommand(userInput);
     string operation = inputList.get(0);
+    
     if (operation == "SELECT")
     {
         handleSELECT(inputList);
@@ -793,15 +800,11 @@ void MENU()
     {
         handleINPUT(inputList);
     }
-    else if (operation == "EXIT" || operation == "exit")
-    {
-        exit(0);
-    }
     else
     {
         throw runtime_error("Wrong operation called!");
-    }
     }    
+    }
 }
 
 
