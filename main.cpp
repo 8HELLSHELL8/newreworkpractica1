@@ -536,80 +536,100 @@ LinkedList<string> getSelectedTablesSELECT(LinkedList<string> commandList)
     return selected;
 }
 
-LinkedList<bool> conditionCheckSELECT(LinkedList<string> conditions, string tableName, HASHtable<string> row) 
+
+bool getFinalResult(LinkedList<bool> results, LinkedList<string> operators)
 {
-    LinkedList<bool> results;
-    for (int i = 0 ; i < conditions.size(); i += 3)
-    {
-        string left = conditions.get(i);
-        string op = conditions.get(i+1);
-        string right = conditions.get(i+2);
-
-        if (op == "=")
-        {
-            if (!isTableName(left)) throw runtime_error("SYNTAX error in condition check");
-            if (conditions.search(tableName) == 0)
-            {
-                for (int j = 0; j < conditions.size(); j += 3)
-                {
-                    results.addtail(1);
-                }
-                return results;
-            }
-            else if (divideAndGetTable(left) == tableName)
-            {
-                bool check = row.HGET(divideAndGetColumn(left)) == right;
-                results.addtail(check);
-            }
-            else if (divideAndGetTable(left) != tableName)
-            {
-                results.addtail(0);
-            }
-            
-        }
-        else
-        {
-            throw runtime_error("SYNTAX error in where condition");
-        }
-    }
-
-    return results;
-}
-
-bool resultForDoubleSelect(LinkedList<string> operators, LinkedList<bool> firstRes, LinkedList<bool> secondRes)
-{
-    LinkedList<bool> resultingTwoList;
-    for (int i = 0; i < firstRes.size(); i++)
-    {
-        resultingTwoList.addtail(firstRes.get(i) || secondRes.get(i));
-    }
-
     bool finalRes;
-    for (int i = 0; i < resultingTwoList.size() - 1; i++)
+    if (operators.size() == 1) return results.get(0);
+    else
     {
-        bool current = resultingTwoList.get(i);
-        bool next = resultingTwoList.get(i + 1);
-        if (i == 0) finalRes = current;
-        else
-        {   
-            string op = operators.get(i-1);
-            if (op == "AND") finalRes = current && next;
-            else if (op == "OR") finalRes = current || next;
+         for (int i = 0; i < results.size() - 1; i++)
+        {
+            if (i == 0) finalRes = results.get(0);
+            if (operators.get(i)== "AND")
+            {
+                finalRes = finalRes && results.get(i + 1);
+            }
+            else if (operators.get(i)== "OR")
+            {
+                finalRes = finalRes || results.get(i + 1);
+            }
         }
     }
+   
     return finalRes;
 }
 
-void handleConditionSELECT(LinkedList<string> commandList)
+bool checkCondition(string table1Name, HASHtable<string> row1, 
+                    string table2Name, HASHtable<string> row2, 
+                    LinkedList<string> conditions, LinkedList<string> operators)
 {
+
+    LinkedList<bool> results;
+
+    for (int i = 0; i < conditions.size(); i += 3)
+    {
+        string left = conditions.get(i);
+        string op = conditions.get(i + 1);
+        string right = conditions.get(i + 2);
+
+        if (isTableName(left) && op == "=")
+        {
+            if (divideAndGetTable(left) ==  table1Name)
+            {
+                left = row1.HGET(divideAndGetColumn(left));
+            }
+            else if (divideAndGetTable(left) ==  table2Name)
+            {
+                left = row2.HGET(divideAndGetColumn(left));
+            }
+            else
+            {
+                throw runtime_error("Wrong table name used");
+            }
+
+
+            if (isTableName(right))
+            {
+                if (divideAndGetTable(right) ==  table1Name)
+                {
+                    right = row1.HGET(divideAndGetColumn(left));
+                }
+                else if (divideAndGetTable(right) ==  table2Name)
+                {
+                    right = row2.HGET(divideAndGetColumn(right));
+                }
+                else
+                {
+                    throw runtime_error("Wrong table name used");
+                }
+            }
+
+            results.addtail(left == right); 
+        }
+        else
+        {
+            throw runtime_error("Wrong syntax in chosen columns");
+        }
+    }
+
+    return getFinalResult(results, operators);
+
+}
+
+ void handleSELECT(LinkedList<string> inputList)
+ {
+    LinkedList<string> selectedColumns = getSelectedTablesSELECT(inputList);
+    LinkedList<string> selectedTables = getSelectedTablesFROM(inputList);
+
     LinkedList<string> conditions;
     LinkedList<string> operators;
     
     bool startWrite = 0;
     string element;
-    for (int i = 0; i < commandList.size(); i++)
+    for (int i = 0; i < inputList.size(); i++)
     {
-        element = commandList.get(i);
+        element = inputList.get(i);
         if (startWrite)
         {
             if (element == "OR" || element == "AND")
@@ -624,104 +644,41 @@ void handleConditionSELECT(LinkedList<string> commandList)
         if (element == "WHERE") startWrite = 1;
         
     }
+
+
+    if (selectedTables.size() == 2 && selectedColumns.size() == 2)
+    {
+
+        LinkedList<HASHtable<string>> table1 = readTable(selectedTables.get(0));
+        LinkedList<HASHtable<string>> table2 = readTable(selectedTables.get(1));
+
+        LinkedList<string> table1ColNames = getColumnNamesFromTable(selectedTables.get(0));
+        LinkedList<string> table2ColNames = getColumnNamesFromTable(selectedTables.get(1));
+
+        for (int i = 1; i < table1.size(); i++)
+        {
+            HASHtable<string> currentRowFirst = table1.get(i);
+            for (int j = 1; j < table2.size(); j++)
+            {
+                HASHtable<string> currentRowSecond = table2.get(j);
+                if (checkCondition(selectedTables.get(0),currentRowFirst, selectedTables.get(1), currentRowSecond, conditions, operators))
+                {
+                    cout << table1.get(i).HGET(divideAndGetColumn(selectedColumns.get(0))) << " " 
+                    <<  table2.get(j).HGET(divideAndGetColumn(selectedColumns.get(1))) << endl;
+                }
+
+            }
+
+        }
+    }
+    else
+    {
+        throw runtime_error("Wrong amount of tables chosen!");
+    }
+
     
 
-    LinkedList<string> selectedTables = getSelectedTablesFROM(commandList);
-    if (selectedTables.size() == 2)
-    {
-        LinkedList<HASHtable<string>> goodTableRows1;
-        LinkedList<HASHtable<string>> goodTableRows2;
-
-        LinkedList<HASHtable<string>> firstTable = readTable(selectedTables.get(0));
-        LinkedList<HASHtable<string>> secondTable = readTable(selectedTables.get(1));
-
-        LinkedList<bool> resultOfCheckFirstTab;
-        LinkedList<bool> resultOfCheckSecondTab;
-
-        bool table1IsEmpty = false;
-        bool table2IsEmpty = false;
-        for (int i = 0; i < max(firstTable.size(), secondTable.size()); i++)
-        {
-            if (i < firstTable.size())
-            {
-                resultOfCheckFirstTab = conditionCheckSELECT(conditions, selectedTables.get(0),firstTable.get(i));
-            }
-            else table1IsEmpty = true;
-
-            if (i < secondTable.size())
-            {
-                 resultOfCheckSecondTab = conditionCheckSELECT(conditions, selectedTables.get(1),secondTable.get(i));
-            } 
-            else table2IsEmpty = true;
-
-            if (table1IsEmpty || table2IsEmpty)
-            {
-                if (table1IsEmpty) 
-                {
-                    resultOfCheckFirstTab = resultOfCheckSecondTab;
-                }
-                else if (table2IsEmpty)
-                {
-                    resultOfCheckSecondTab = resultOfCheckFirstTab;
-                }
-            }
-
-
-            if (resultForDoubleSelect(operators,resultOfCheckFirstTab, resultOfCheckSecondTab) && (table1IsEmpty || table2IsEmpty) == 0)
-            {
-                goodTableRows1.addtail(firstTable.get(i));
-                goodTableRows2.addtail(secondTable.get(i));
-            }
-            else
-            {
-                if (table1IsEmpty)
-                {
-                    goodTableRows2.addtail(secondTable.get(i));
-                }
-                else if (table2IsEmpty)
-                {
-                    goodTableRows1.addtail(firstTable.get(i));
-                }
-            }
-        }
-
-    LinkedList<string> selectedColumns = getSelectedTablesSELECT(commandList);
-    for (int i = 0; i < goodTableRows1.size(); i++)
-    {
-        for (int j = 0; j < goodTableRows2.size(); j++)
-        {
-            cout << firstTable.get(i).HGET(divideAndGetColumn(selectedColumns.get(0)))   << " " << firstTable.get(i).HGET(divideAndGetColumn(selectedColumns.get(1)))  << endl;
-        }
-    }
-
-
-
-    }
-    else if (selectedTables.size() == 1)
-    {
-        LinkedList<string> columnNames = getColumnNamesFromTable(divideAndGetTable(selectedTables.get(0)));
-        LinkedList<HASHtable<string>> goodTableRows1;
-        LinkedList<bool> resultOfCheckFirstTab;
-        LinkedList<HASHtable<string>> firstTable = readTable(selectedTables.get(0));
-        LinkedList<string> selectedColumns = getSelectedTablesSELECT(commandList);
-        if (selectedColumns.size() != 2) throw runtime_error("Wrong amount of columns selected");
-        for (int i = 0; i < firstTable.size(); i++)
-        {
-            resultOfCheckFirstTab = conditionCheckSELECT(conditions, selectedTables.get(0),firstTable.get(i));
-
-            cout <<  firstTable.get(i).HGET(divideAndGetColumn(selectedColumns.get(0)))   << " " << firstTable.get(i).HGET(divideAndGetColumn(selectedColumns.get(1)))  << endl;
-
-        }
-    } 
-    else 
-    {
-        throw runtime_error("SYNTAX error in where wrong amount of tables used");
-    }
-    
-
-   
-}
- 
+ }
 
 
 int main()
@@ -734,8 +691,8 @@ int main()
     system("clear");
     //inputList.print();
 
-
-    handleConditionSELECT(inputList);
+    
+    handleSELECT(inputList);
 
     // cout << inputList.size();
     // for (int i = 0; i < inputList.size(); i++)
