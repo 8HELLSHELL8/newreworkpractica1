@@ -540,7 +540,7 @@ LinkedList<string> getSelectedTablesSELECT(LinkedList<string> commandList)
 bool getFinalResult(LinkedList<bool> results, LinkedList<string> operators)
 {
     bool finalRes;
-    if (operators.size() == 1) return results.get(0);
+    if (operators.size() == 0) return results.get(0);
     else
     {
          for (int i = 0; i < results.size() - 1; i++)
@@ -566,6 +566,7 @@ bool checkCondition(string table1Name, HASHtable<string> row1,
 {
 
     LinkedList<bool> results;
+
 
     for (int i = 0; i < conditions.size(); i += 3)
     {
@@ -617,7 +618,7 @@ bool checkCondition(string table1Name, HASHtable<string> row1,
 
 }
 
- void handleSELECT(LinkedList<string> inputList)
+void handleSELECT(LinkedList<string> inputList)
  {
     LinkedList<string> selectedColumns = getSelectedTablesSELECT(inputList);
     LinkedList<string> selectedTables = getSelectedTablesFROM(inputList);
@@ -644,7 +645,6 @@ bool checkCondition(string table1Name, HASHtable<string> row1,
         if (element == "WHERE") startWrite = 1;
         
     }
-
 
     if (selectedTables.size() == 2 && selectedColumns.size() == 2)
     {
@@ -675,10 +675,7 @@ bool checkCondition(string table1Name, HASHtable<string> row1,
     {
         throw runtime_error("Wrong amount of tables chosen!");
     }
-
-    
-
- }
+}
 
 
 int main()
